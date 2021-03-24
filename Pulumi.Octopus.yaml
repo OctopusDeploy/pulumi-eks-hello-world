@@ -1,0 +1,4 @@
+config:
+  aws:region: "#{AWS.region}"
+  pulumi-eks-hello-world:vpcName: "#{vpcName}" 
+  pulumi-eks-hello-world:clusterName: "#{clusterName}" 

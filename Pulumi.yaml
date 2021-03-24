@@ -1,0 +1,4 @@
+name: pulumi-eks-hello-world
+runtime: nodejs
+description: A sample demonstrating the power of combining Pulumi and Octopus Deploy
+  to deploy to AWS EKS
