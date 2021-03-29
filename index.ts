@@ -20,5 +20,12 @@ vpcId: vpc.id,
     deployDashboard: false,
 });
 
+// If we're running inside Octopus, emit a service message to output the cluster URL 
+if (config.requireBoolean("runningViaOctopus")) {
+    console.log(
+        pulumi.interpolate `set_octopusvariable "k8sClusterUrl" "${cluster.core.endpoint}"`
+    )
+}
+
 // Export the clusters' kubeconfig.
 export const kubeconfig = cluster.kubeconfig

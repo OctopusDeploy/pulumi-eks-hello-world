@@ -1,3 +1,4 @@
+.DS_Store
 # Logs
 logs
 *.log
@@ -104,3 +105,4 @@ dist
 .tern-port
 
 Pulumi.michrich-local.yaml
+publish/
