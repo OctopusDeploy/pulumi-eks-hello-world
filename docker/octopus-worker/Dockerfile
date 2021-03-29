@@ -9,7 +9,7 @@ RUN apt-get update -y && \
 RUN curl -o - https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /tmp/microsoft.asc.gpg; \
     curl -o /tmp/microsoft-prod.list https://packages.microsoft.com/config/debian/10/prod.list
 
-FROM pulumi/pulumi-nodejs:2.23.1
+FROM pulumi/pulumi-nodejs:2.23.2
 
 ARG DOTNET_RUNTIME_VERSION="3.1"
 ARG AWS_CLI_VERSION=2.1.31

@@ -2,4 +2,5 @@ config:
   aws:region: "#{AWS.region}"
   pulumi-eks-hello-world:vpcName: "#{vpcName}" 
   pulumi-eks-hello-world:clusterName: "#{clusterName}" 
-  runningViaOctopus: true
+  pulumi-eks-hello-world:runningViaOctopus: true
+  pulumi-eks-hello-world:isMinikube: false

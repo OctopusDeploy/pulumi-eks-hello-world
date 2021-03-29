@@ -8,6 +8,10 @@ let config = new pulumi.Config();
 const vpcName = config.require("vpcName");
 const clusterName = config.require("clusterName");
 
+// Minikube does not implement services of type `LoadBalancer`; require the user to specify if we're
+// running on minikube, and if so, create only services of type ClusterIP.
+const isMinikube = config.getBoolean("isMinikube");
+
 // Create an EKS cluster with non-default configuration
 const vpc = new awsx.ec2.Vpc(vpcName, { subnets: [{ type: "public" }] });
 const cluster = new eks.Cluster(clusterName, {
