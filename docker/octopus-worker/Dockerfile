@@ -3,6 +3,7 @@ FROM ubuntu:bionic AS builder
 WORKDIR /dotnet
 RUN apt-get update -y && \
       apt-get install -y \
+      apt-transport-https \
       curl \
       gpg
 RUN curl -o - https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /tmp/microsoft.asc.gpg; \
@@ -13,6 +14,7 @@ FROM pulumi/pulumi-nodejs:2.23.1
 ARG DOTNET_RUNTIME_VERSION="3.1"
 ARG AWS_CLI_VERSION=2.1.31
 ARG AWS_IAM_AUTHENTICATOR_VERSION=0.5.1
+ARG Kubectl_Version=1.18.8-00
 
 # We need to install ca certs before copying the ms prod debs packages
 RUN --mount=target=/var/lib/apt/lists,type=cache \
@@ -45,3 +47,10 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION
     ./aws/install && \
     rm awscliv2.zip && \
     rm -rf ./aws
+
+# Get kubectl
+# https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-using-native-package-management
+RUN curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list && \
+    apt-get update -y && \
+    apt-get install -y kubectl=${Kubectl_Version}
