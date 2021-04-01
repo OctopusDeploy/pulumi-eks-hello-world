@@ -6,15 +6,11 @@ import * as k8s from "@pulumi/kubernetes";
 let config = new pulumi.Config();
 
 const vpcName = config.require("vpcName");
-const clusterName = config.require("clusterName");
-
-// Minikube does not implement services of type `LoadBalancer`; require the user to specify if we're
-// running on minikube, and if so, create only services of type ClusterIP.
-const isMinikube = config.getBoolean("isMinikube");
+const clusterNamePrefix = config.require("clusterNamePrefix");
 
 // Create an EKS cluster with non-default configuration
 const vpc = new awsx.ec2.Vpc(vpcName, { subnets: [{ type: "public" }] });
-const cluster = new eks.Cluster(clusterName, {
+const cluster = new eks.Cluster(clusterNamePrefix, {
 vpcId: vpc.id,
     subnetIds: vpc.publicSubnetIds,
     desiredCapacity: 2,
@@ -24,18 +20,19 @@ vpcId: vpc.id,
     deployDashboard: false,
 });
 
-// If we're running inside Octopus, emit a service message to output the cluster URL 
-if (config.requireBoolean("runningViaOctopus")) {
-
-    console.log(
-        pulumi.interpolate `set_octopusvariable "k8sClusterUrl" "${cluster.core.endpoint}"`
-    )
-}
-
 // Export the clusters' kubeconfig.
 export const kubeconfig = cluster.kubeconfig
 
+// Export the cluster details
+export const clusterUrl = cluster.core.endpoint
+export const clusterName = cluster.core.cluster.name; 
+
+const k8sProvider = new k8s.Provider("k8sProvider", {kubeconfig: kubeconfig} );
+
 // Deploy the guestbook application to the k8s cluster
+
+const redisImage = config.require("redisImage");
+const guestbookImage = config.require("guestbookImage");
 
 //
 // REDIS LEADER.
@@ -59,7 +56,8 @@ const redisLeaderDeployment = new k8s.apps.v1.Deployment("redis-leader", {
             },
         },
     },
-});
+}, { provider: k8sProvider });
+
 const redisLeaderService = new k8s.core.v1.Service("redis-leader", {
     metadata: {
         name: "redis-leader",
@@ -69,44 +67,8 @@ const redisLeaderService = new k8s.core.v1.Service("redis-leader", {
         ports: [{ port: 6379, targetPort: 6379 }],
         selector: redisLeaderDeployment.spec.template.metadata.labels,
     },
-});
+}, { provider: k8sProvider });
 
-//
-// REDIS REPLICA.
-//
-
-const redisReplicaLabels = { app: "redis-replica" };
-const redisReplicaDeployment = new k8s.apps.v1.Deployment("redis-replica", {
-    spec: {
-        selector: { matchLabels: redisReplicaLabels },
-        template: {
-            metadata: { labels: redisReplicaLabels },
-            spec: {
-                containers: [
-                    {
-                        name: "replica",
-                        image: "pulumi/guestbook-redis-replica",
-                        resources: { requests: { cpu: "100m", memory: "100Mi" } },
-                        // If your cluster config does not include a dns service, then to instead access an environment
-                        // variable to find the leader's host, change `value: "dns"` to read `value: "env"`.
-                        env: [{ name: "GET_HOSTS_FROM", value: "dns" }],
-                        ports: [{ containerPort: 6379 }],
-                    },
-                ],
-            },
-        },
-    },
-});
-const redisReplicaService = new k8s.core.v1.Service("redis-replica", {
-    metadata: {
-        name: "redis-replica",
-        labels: redisReplicaDeployment.metadata.labels
-    },
-    spec: {
-        ports: [{ port: 6379, targetPort: 6379 }],
-        selector: redisReplicaDeployment.spec.template.metadata.labels,
-    },
-});
 
 //
 // FRONTEND
@@ -134,23 +96,20 @@ const frontendDeployment = new k8s.apps.v1.Deployment("frontend", {
             },
         },
     },
-});
+}, { provider: k8sProvider});
+
 const frontendService = new k8s.core.v1.Service("frontend", {
     metadata: {
         labels: frontendDeployment.metadata.labels,
         name: "frontend",
     },
     spec: {
-        type: isMinikube ? "ClusterIP" : "LoadBalancer",
+        type: "LoadBalancer",
         ports: [{ port: 80 }],
         selector: frontendDeployment.spec.template.metadata.labels,
     },
-});
+}, {provider: k8sProvider });
 
 // Export the frontend IP.
 export let frontendIp: pulumi.Output<string>;
-if (isMinikube) {
-    frontendIp = frontendService.spec.clusterIP;
-} else {
-    frontendIp = frontendService.status.loadBalancer.ingress[0].ip;
-}
+frontendIp = frontendService.status.loadBalancer.ingress[0].ip;

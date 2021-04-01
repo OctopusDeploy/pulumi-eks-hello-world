@@ -1,6 +1,6 @@
 config:
   aws:region: "#{AWS.region}"
   pulumi-eks-hello-world:vpcName: "#{vpcName}" 
-  pulumi-eks-hello-world:clusterName: "#{clusterName}" 
-  pulumi-eks-hello-world:runningViaOctopus: true
-  pulumi-eks-hello-world:isMinikube: false
+  pulumi-eks-hello-world:clusterNamePrefix: "#{clusterNamePrefix}" 
+  pulumi-eks-hello-world:redisImage: "#{redis.image}"
+  pulumi-eks-hello-world:guestbookImage: "#{guestbook.image}"
